@@ -18,7 +18,7 @@ Features:
 
 Dependencies:
 -------------
-Requires ur_rtde version 1.6.0
+Requires ur_rtde version 1.6.0, pip install ur_rtde==1.6.0
 - rtde_receive
 - rtde_control
 - rtde_io
