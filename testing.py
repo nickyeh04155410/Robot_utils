@@ -98,7 +98,7 @@ if __name__ == "__main__":
             )
 
             # Write to shared memory for plotting process
-            wrench_world_shared[:] = wrench_world
+            wrench_world_shared[:] = wrench_flange
 
             count += 1
 
