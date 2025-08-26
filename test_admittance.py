@@ -41,7 +41,7 @@ rtde_lock = multiprocessing.Lock()
 rtde_mgr = RTDEManager(robot_ip, use_receive=True,
                        use_control=True, use_io=False)
 
-ad_c = AdmittanceControl(M_trans = M_t, K_trans = None, Zeta_trans = None,
+ad_c = AdmittanceControl(M_trans = M_t, K_trans = K_t, Zeta_trans = None,
                  M_rot = M_r, K_rot = None, Zeta_rot = None)
 
 transformer = FrameTransformer(offset_base_world, offset_tcp_flange)
@@ -55,6 +55,8 @@ rtde_c = rtde_mgr.get_interface('control')
 
 tcp_pose = rtde_r.getActualTCPPose()
 x_init, r_init = transformer.get_pos_rotm(tcp_pose)
+x_desired, r_desired = x_init.copy(), r_init.copy()
+
 tcp_force_init = np.array(rtde_r.getActualTCPForce())
 v_current = np.array([[0.0], [0.0], [0.0]])
 v_des = np.array([[0.0], [0.0], [0.0]])
@@ -86,20 +88,20 @@ try:
             
             tcp_force = np.array(rtde_r.getActualTCPForce())
             tcp_pose = rtde_r.getActualTCPPose()
-            x_current, r_mes = transformer.get_pos_rotm(tcp_pose)
+            x_mes, r_mes = transformer.get_pos_rotm(tcp_pose)
 
         force = np.array([[0], [0], [apply_threshold(tcp_force[2])]])
-        # force = np.array([[0], [0], [0]])
-        torque = np.array([[0], [0], [tcp_force[5]]])
+        torque = np.array([[0], [0], [0]])
+        # torque = np.array([[0], [0], [tcp_force[5]]])
 
 
-        a_current = ad_c.translational(force, np.array(x_init).reshape(3, 1), np.array(x_current).reshape(3, 1), v_des, v_current)
-        v_current, x_command = ad_c.trans_integrate(np.array(x_current).reshape(3, 1), v_current, a_current, dt, mode="position")
+        a_current = ad_c.translational(force, np.array(x_desired).reshape(3, 1), np.array(x_current).reshape(3, 1), v_des, v_current)
+        v_current, x_current = ad_c.trans_integrate(np.array(x_current).reshape(3, 1), v_current, a_current, dt, mode="position")
 
         alpha_current = ad_c.rotational(torque, r_init, r_mes, w_des, w_current)
         w_current, r_current, rotation_vector = ad_c.rot_integrate(r_init, r_current, w_current, alpha_current, dt, mode="position")
         
-        pose = np.array([x_command.T[0][0], x_command.T[0][1], x_command.T[0][2],
+        pose = np.array([x_current.T[0][0], x_current.T[0][1], x_current.T[0][2],
                     rotation_vector[0], rotation_vector[1], rotation_vector[2]])
 
         rtde_c.servoL(pose.tolist(), velocity, acceleration, dt, lookahead_time, gain)
